@@ -3,7 +3,10 @@ import path from "path";
 import type { Request } from "express";
 import multer from "multer";
 
-const COVERS_DIR = path.resolve("uploads/covers");
+export const uploadsRootDir =
+  process.env.VERCEL === "1" ? path.join("/tmp", "uploads") : path.resolve("uploads");
+
+const COVERS_DIR = path.join(uploadsRootDir, "covers");
 
 const ALLOWED_MIME = new Set([
   "image/jpeg",

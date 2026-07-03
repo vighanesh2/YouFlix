@@ -1,9 +1,6 @@
-import type { Request, Response, NextFunction } from "express";
-import { assertConfig } from "./config/env.js";
+import type { IncomingMessage, ServerResponse } from "http";
 import { connectDatabase } from "./config/database.js";
 import { createApp } from "./app.js";
-
-assertConfig();
 
 const app = createApp();
 
@@ -19,13 +16,28 @@ function ensureDatabase() {
   return dbReady;
 }
 
-async function handler(req: Request, res: Response, next: NextFunction) {
+export default async function handler(
+  req: IncomingMessage,
+  res: ServerResponse
+) {
   try {
     await ensureDatabase();
-    app(req, res, next);
   } catch (err) {
-    next(err as Error);
+    console.error("Database connection failed:", err);
+    res.statusCode = 503;
+    res.setHeader("Content-Type", "application/json");
+    res.end(
+      JSON.stringify({
+        error: "Database unavailable",
+        message: err instanceof Error ? err.message : "Unknown error",
+      })
+    );
+    return;
   }
-}
 
-export default handler;
+  // Express apps are valid (req, res) request listeners.
+  (app as unknown as (req: IncomingMessage, res: ServerResponse) => void)(
+    req,
+    res
+  );
+}

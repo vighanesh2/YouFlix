@@ -1,8 +1,8 @@
 import cors from "cors";
 import express, { Request, Response, NextFunction } from "express";
-import path from "path";
 import mongoose from "mongoose";
 import { config } from "./config/env.js";
+import { uploadsRootDir } from "./config/uploads.js";
 import { authRouter } from "./routes/auth.js";
 import { importJobsRouter } from "./routes/importJobs.js";
 import { profilesRouter } from "./routes/profiles.js";
@@ -21,7 +21,7 @@ export function createApp() {
 
   app.use(
     "/uploads",
-    express.static(path.resolve("uploads"), {
+    express.static(uploadsRootDir, {
       setHeaders(res, filePath) {
         if (filePath.endsWith(".avif")) {
           res.setHeader("Content-Type", "image/avif");
