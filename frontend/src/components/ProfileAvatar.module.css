@@ -1,0 +1,79 @@
+.avatar {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.sm {
+  width: 32px;
+  height: 32px;
+}
+
+.md {
+  width: 120px;
+  height: 120px;
+}
+
+.lg {
+  width: 140px;
+  height: 140px;
+}
+
+.face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 18%;
+}
+
+.eyes {
+  display: flex;
+  justify-content: space-between;
+  width: 42%;
+  margin-bottom: 12%;
+}
+
+.sm .eyes {
+  width: 46%;
+  margin-bottom: 8%;
+}
+
+.eye {
+  width: 30%;
+  aspect-ratio: 1;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.15);
+}
+
+.sm .eye {
+  width: 28%;
+}
+
+.mouth {
+  width: 28%;
+  height: 8%;
+  border-bottom: 3px solid #fff;
+  border-radius: 0 0 50% 50%;
+}
+
+.sm .mouth {
+  width: 24%;
+  border-bottom-width: 2px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
