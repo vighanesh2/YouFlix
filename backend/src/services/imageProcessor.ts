@@ -3,32 +3,62 @@ import path from "path";
 import sharp from "sharp";
 import { randomUUID } from "crypto";
 import { coversUploadDir, getCoverPublicUrl } from "../config/uploads.js";
+import {
+  deletePublicBlob,
+  isBlobUrl,
+  uploadPublicBlob,
+  useBlobStorage,
+} from "./blobStorage.js";
 
 const POSTER_WIDTH = 400;
 const HERO_WIDTH = 1280;
 
-export async function saveCoverAsAvif(
+async function processCoverBuffer(
   buffer: Buffer,
-  variant: "poster" | "hero" = "hero"
-): Promise<string> {
+  variant: "poster" | "hero"
+): Promise<Buffer> {
   const width = variant === "hero" ? HERO_WIDTH : POSTER_WIDTH;
-  const filename = `${randomUUID()}.avif`;
-  const filepath = path.join(coversUploadDir, filename);
 
-  await sharp(buffer)
+  return sharp(buffer)
     .rotate()
     .resize(width, undefined, {
       fit: "inside",
       withoutEnlargement: true,
     })
     .avif({ quality: 62, effort: 4 })
-    .toFile(filepath);
+    .toBuffer();
+}
 
+export async function saveCoverAsAvif(
+  buffer: Buffer,
+  variant: "poster" | "hero" = "hero"
+): Promise<string> {
+  const processed = await processCoverBuffer(buffer, variant);
+  const filename = `${randomUUID()}.avif`;
+
+  if (useBlobStorage()) {
+    return uploadPublicBlob(
+      `covers/${filename}`,
+      processed,
+      "image/avif"
+    );
+  }
+
+  const filepath = path.join(coversUploadDir, filename);
+  await fs.promises.writeFile(filepath, processed);
   return getCoverPublicUrl(filename);
 }
 
 export function deleteCoverFile(coverUrl: string): void {
+  if (isBlobUrl(coverUrl)) {
+    deletePublicBlob(coverUrl).catch((err) => {
+      console.warn("Failed to delete blob cover:", err);
+    });
+    return;
+  }
+
   if (!coverUrl.startsWith("/uploads/covers/")) return;
+
   const filename = path.basename(coverUrl);
   const filepath = path.join(coversUploadDir, filename);
   fs.unlink(filepath, () => {});

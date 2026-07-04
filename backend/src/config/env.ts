@@ -24,6 +24,7 @@ export const config = {
   syncCooldownHours: parseInt(process.env.SYNC_COOLDOWN_HOURS ?? "24", 10),
   jwtSecret: process.env.JWT_SECRET ?? "dev-insecure-secret-change-me",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
+  blobReadWriteToken: process.env.BLOB_READ_WRITE_TOKEN ?? "",
 };
 
 export function assertConfig(): void {
