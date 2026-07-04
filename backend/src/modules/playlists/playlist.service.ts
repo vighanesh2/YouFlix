@@ -3,7 +3,7 @@ import { deleteCoverFile } from "../../services/imageProcessor.js";
 import type { ShowOverrides } from "../../utils/showOverrides.js";
 import { Playlist, type PlaylistDocument } from "./playlist.model.js";
 import { PlaylistVideo } from "../playlist-videos/playlistVideo.model.js";
-import { Video } from "../videos/video.model.js";
+import type { VideoDocument } from "../videos/video.model.js";
 
 import { isMovieStorageKey } from "../../utils/parseYouTubeImport.js";
 
@@ -69,7 +69,7 @@ export async function getPlaylistVideos(playlistId: string) {
     isActive: true,
   })
     .sort({ position: 1 })
-    .populate<{ videoId: InstanceType<typeof Video> }>("videoId");
+    .populate<{ videoId: VideoDocument }>("videoId");
 
   return entries.map((entry) => {
     const video = entry.videoId;
