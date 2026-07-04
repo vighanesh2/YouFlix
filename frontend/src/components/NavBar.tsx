@@ -126,9 +126,6 @@ export default function NavBar() {
         <NavLink to="/" className={`${styles.navLink} ${styles.navHome}`} end>
           Home
         </NavLink>
-        <NavLink to="/shows" className={`${styles.navLink} ${styles.navLinkSecondary}`}>
-          Shows
-        </NavLink>
         <NavLink to="/movies" className={`${styles.navLink} ${styles.navLinkSecondary}`}>
           Movies
         </NavLink>
