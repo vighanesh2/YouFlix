@@ -1,7 +1,7 @@
 import cors from "cors";
 import express, { Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
-import "./registerModels.js";
+import "./config/registerModels.js";
 import { config } from "./config/env.js";
 import { uploadsRootDir } from "./config/uploads.js";
 import { authRouter } from "./routes/auth.js";
