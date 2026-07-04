@@ -146,8 +146,14 @@
   color: var(--text-muted);
 }
 
-.editBtn {
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   margin-top: 0.35rem;
+}
+
+.editBtn {
   align-self: flex-start;
   padding: 0.45rem 0.75rem;
   font-size: 0.82rem;
@@ -160,9 +166,33 @@
   transition: border-color 0.2s, background 0.2s;
 }
 
-.editBtn:hover {
+.editBtn:hover:not(:disabled) {
   border-color: var(--accent);
   background: rgba(229, 9, 20, 0.08);
+}
+
+.removeBtn {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.82rem;
+  font-family: var(--font-body);
+  color: #ffb4b4;
+  background: transparent;
+  border: 1px solid rgba(255, 107, 107, 0.35);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+
+.removeBtn:hover:not(:disabled) {
+  color: #fff;
+  border-color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.12);
+}
+
+.removeBtn:disabled,
+.editBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .importSection {

@@ -170,6 +170,12 @@ export function getPlaylistVideos(playlistId: string): Promise<PlaylistVideo[]> 
   return apiFetch<PlaylistVideo[]>(`/api/playlists/${playlistId}/videos`);
 }
 
+export function deletePlaylist(playlistId: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/api/playlists/${playlistId}`, {
+    method: "DELETE",
+  });
+}
+
 export function pollImportJob(
   jobId: string,
   onProgress?: (job: ImportJob) => void

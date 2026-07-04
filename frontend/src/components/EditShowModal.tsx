@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import {
+  deletePlaylist,
   updatePlaylist,
   type ImportShowDetails,
   type Playlist,
@@ -18,9 +19,15 @@ interface Props {
   show: Playlist;
   onClose: () => void;
   onSaved: (updated: Playlist) => void;
+  onRemoved?: (playlistId: string) => void;
 }
 
-export default function EditShowModal({ show, onClose, onSaved }: Props) {
+export default function EditShowModal({
+  show,
+  onClose,
+  onSaved,
+  onRemoved,
+}: Props) {
   const [details, setDetails] = useState<ImportShowDetails>(() =>
     playlistToEditDetails(show)
   );
@@ -28,6 +35,7 @@ export default function EditShowModal({ show, onClose, onSaved }: Props) {
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [removeCover, setRemoveCover] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const placeholders = playlistToPlaceholders(show);
@@ -46,12 +54,12 @@ export default function EditShowModal({ show, onClose, onSaved }: Props) {
 
   useEffect(() => {
     function handleEscape(e: KeyboardEvent) {
-      if (e.key === "Escape" && !saving) onClose();
+      if (e.key === "Escape" && !saving && !removing) onClose();
     }
 
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [onClose, saving]);
+  }, [onClose, saving, removing]);
 
   function updateDetail(key: keyof ImportShowDetails, value: string) {
     setDetails((prev) => ({ ...prev, [key]: value }));
@@ -83,8 +91,31 @@ export default function EditShowModal({ show, onClose, onSaved }: Props) {
     }
   }
 
+  async function handleRemove() {
+    const kind = show.contentType === "movie" ? "movie" : "show";
+    const confirmed = window.confirm(
+      `Remove "${getShowTitle(show)}" from your library? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setRemoving(true);
+    setError(null);
+
+    try {
+      await deletePlaylist(show.id);
+      onRemoved?.(show.id);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to remove ${kind}`);
+    } finally {
+      setRemoving(false);
+    }
+  }
+
+  const busy = saving || removing;
+
   return (
-    <div className={styles.overlay} onClick={() => !saving && onClose()}>
+    <div className={styles.overlay} onClick={() => !busy && onClose()}>
       <div
         className={styles.modal}
         role="dialog"
@@ -103,7 +134,7 @@ export default function EditShowModal({ show, onClose, onSaved }: Props) {
             type="button"
             className={styles.closeBtn}
             onClick={onClose}
-            disabled={saving}
+            disabled={busy}
             aria-label="Close"
           >
             ×
@@ -114,7 +145,7 @@ export default function EditShowModal({ show, onClose, onSaved }: Props) {
           <ShowDetailsForm
             details={details}
             onChange={updateDetail}
-            disabled={saving}
+            disabled={busy}
             idPrefix={`edit-${show.id}`}
             placeholders={placeholders}
             intro="Clear a field to fall back to the YouTube default shown as placeholder."
@@ -131,7 +162,7 @@ export default function EditShowModal({ show, onClose, onSaved }: Props) {
               setCoverFile(null);
             }}
             showRemoveCustom={Boolean(show.coverUrl)}
-            disabled={saving}
+            disabled={busy}
           />
 
           {error && (
@@ -143,15 +174,25 @@ export default function EditShowModal({ show, onClose, onSaved }: Props) {
           <div className={styles.actions}>
             <button
               type="button"
-              className={styles.cancelBtn}
-              onClick={onClose}
-              disabled={saving}
+              className={styles.removeBtn}
+              onClick={handleRemove}
+              disabled={busy}
             >
-              Cancel
+              {removing ? "Removing…" : "Remove from library"}
             </button>
-            <button type="submit" className={styles.saveBtn} disabled={saving}>
-              {saving ? "Saving…" : "Save changes"}
-            </button>
+            <div className={styles.actionsEnd}>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                onClick={onClose}
+                disabled={busy}
+              >
+                Cancel
+              </button>
+              <button type="submit" className={styles.saveBtn} disabled={busy}>
+                {saving ? "Saving…" : "Save changes"}
+              </button>
+            </div>
           </div>
         </form>
       </div>

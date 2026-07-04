@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
+  deletePlaylist,
   importPlaylist,
   listPlaylists,
   pollImportJob,
@@ -32,6 +33,7 @@ export default function MyNetflixPage() {
   const [loadingLibrary, setLoadingLibrary] = useState(true);
   const [libraryError, setLibraryError] = useState<string | null>(null);
   const [editingShow, setEditingShow] = useState<Playlist | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   const [url, setUrl] = useState("");
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -80,6 +82,34 @@ export default function MyNetflixPage() {
     setPlaylists((prev) =>
       prev.map((item) => (item.id === updated.id ? updated : item))
     );
+  }
+
+  function handleShowRemoved(playlistId: string) {
+    setPlaylists((prev) => prev.filter((item) => item.id !== playlistId));
+    setEditingShow((current) =>
+      current?.id === playlistId ? null : current
+    );
+  }
+
+  async function handleRemove(show: Playlist) {
+    const label = getShowTitle(show);
+    const kind = show.contentType === "movie" ? "movie" : "show";
+    const confirmed = window.confirm(
+      `Remove "${label}" from your library? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setRemovingId(show.id);
+    try {
+      await deletePlaylist(show.id);
+      handleShowRemoved(show.id);
+    } catch (err) {
+      window.alert(
+        err instanceof Error ? err.message : `Failed to remove ${kind}`
+      );
+    } finally {
+      setRemovingId(null);
+    }
   }
 
   async function handleImport(e: FormEvent) {
@@ -207,13 +237,23 @@ export default function MyNetflixPage() {
                           ? "Movie"
                           : `${show.videoCount} episode${show.videoCount !== 1 ? "s" : ""}`}
                       </p>
-                      <button
-                        type="button"
-                        className={styles.editBtn}
-                        onClick={() => setEditingShow(show)}
-                      >
-                        Edit details
-                      </button>
+                      <div className={styles.cardActions}>
+                        <button
+                          type="button"
+                          className={styles.editBtn}
+                          onClick={() => setEditingShow(show)}
+                        >
+                          Edit details
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.removeBtn}
+                          onClick={() => handleRemove(show)}
+                          disabled={removingId === show.id}
+                        >
+                          {removingId === show.id ? "Removing…" : "Remove"}
+                        </button>
+                      </div>
                     </div>
                   </article>
                 );
@@ -300,6 +340,7 @@ export default function MyNetflixPage() {
           show={editingShow}
           onClose={() => setEditingShow(null)}
           onSaved={handleShowSaved}
+          onRemoved={handleShowRemoved}
         />
       )}
     </div>
