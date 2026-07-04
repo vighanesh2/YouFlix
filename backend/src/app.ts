@@ -62,6 +62,17 @@ export function createApp() {
       res.status(400).json({ error: "Cover image must be 8 MB or smaller." });
       return;
     }
+    if (err.message.includes("Cover uploads require Vercel Blob")) {
+      res.status(503).json({ error: err.message });
+      return;
+    }
+    if (err.message.includes("BLOB_READ_WRITE_TOKEN is not configured")) {
+      res.status(503).json({
+        error:
+          "Cover uploads require Vercel Blob. Connect a Blob store to the backend service and redeploy.",
+      });
+      return;
+    }
     console.error(err);
     res.status(500).json({
       error: "Internal server error",

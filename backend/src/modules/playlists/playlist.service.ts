@@ -1,5 +1,6 @@
 import { Types } from "mongoose";
 import { deleteCoverFile } from "../../services/imageProcessor.js";
+import { getReadableCoverUrl } from "../../services/blobStorage.js";
 import type { ShowOverrides } from "../../utils/showOverrides.js";
 import { Playlist, type PlaylistDocument } from "./playlist.model.js";
 import { PlaylistVideo } from "../playlist-videos/playlistVideo.model.js";
@@ -37,8 +38,12 @@ function mapPlaylistFields(playlist: PlaylistDocument | Record<string, unknown>)
   };
 }
 
-export function formatPlaylist(playlist: PlaylistDocument) {
-  return mapPlaylistFields(playlist);
+export async function formatPlaylist(playlist: PlaylistDocument) {
+  const fields = mapPlaylistFields(playlist);
+  return {
+    ...fields,
+    coverUrl: await getReadableCoverUrl(fields.coverUrl),
+  };
 }
 
 export async function listPlaylists() {
@@ -46,7 +51,7 @@ export async function listPlaylists() {
     .sort({ updatedAt: -1 })
     .lean();
 
-  return playlists.map((playlist) => mapPlaylistFields(playlist));
+  return Promise.all(playlists.map((playlist) => formatPlaylist(playlist)));
 }
 
 export async function getPlaylistById(playlistId: string) {

@@ -4,9 +4,10 @@ import sharp from "sharp";
 import { randomUUID } from "crypto";
 import { coversUploadDir, getCoverPublicUrl } from "../config/uploads.js";
 import {
+  assertBlobStorageAvailable,
   deletePublicBlob,
   isBlobUrl,
-  uploadPublicBlob,
+  uploadCoverBlob,
   useBlobStorage,
 } from "./blobStorage.js";
 
@@ -33,11 +34,13 @@ export async function saveCoverAsAvif(
   buffer: Buffer,
   variant: "poster" | "hero" = "hero"
 ): Promise<string> {
+  assertBlobStorageAvailable();
+
   const processed = await processCoverBuffer(buffer, variant);
   const filename = `${randomUUID()}.avif`;
 
   if (useBlobStorage()) {
-    return uploadPublicBlob(
+    return uploadCoverBlob(
       `covers/${filename}`,
       processed,
       "image/avif"

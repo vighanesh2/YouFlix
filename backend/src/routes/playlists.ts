@@ -110,7 +110,7 @@ playlistsRouter.patch(
       return;
     }
 
-    res.json(formatPlaylist(updated));
+    res.json(await formatPlaylist(updated));
   })
 );
 
@@ -123,7 +123,7 @@ playlistsRouter.get(
       res.status(404).json({ error: "Playlist not found" });
       return;
     }
-    res.json(formatPlaylist(playlist));
+    res.json(await formatPlaylist(playlist));
   })
 );
 
