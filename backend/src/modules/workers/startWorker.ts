@@ -1,7 +1,7 @@
 import { Worker } from "bullmq";
+import { config } from "../../config/env.js";
 import {
   PLAYLIST_IMPORT_QUEUE,
-  redisConnectionOptions,
   type PlaylistImportJobData,
 } from "../../config/queue.js";
 import { processPlaylistImportJob } from "../workers/playlistImport.worker.js";
@@ -12,7 +12,13 @@ export function startPlaylistImportWorker(): Worker<PlaylistImportJobData> {
     async (job) => {
       await processPlaylistImportJob(job.data);
     },
-    { connection: redisConnectionOptions, concurrency: 2 }
+    {
+      connection: {
+        url: config.redisUrl,
+        maxRetriesPerRequest: null,
+      },
+      concurrency: 2,
+    }
   );
 
   worker.on("completed", (job) => {

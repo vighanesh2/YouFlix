@@ -1,11 +1,16 @@
 import { Types } from "mongoose";
 import { config } from "../../config/env.js";
-import { playlistImportQueue } from "../../config/queue.js";
+import {
+  getPlaylistImportQueue,
+  useJobQueue,
+  type PlaylistImportJobData,
+} from "../../config/queue.js";
 import { getImportStorageKeyFromUrl, getYouTubeSourceUrl } from "../../utils/parseYouTubeImport.js";
 import {
   pickDefinedOverrides,
   type ShowOverrides,
 } from "../../utils/showOverrides.js";
+import { processPlaylistImportJob } from "../workers/playlistImport.worker.js";
 import { ImportJob, type ImportJobDocument } from "./importJob.model.js";
 import { Playlist } from "../playlists/playlist.model.js";
 
@@ -55,22 +60,24 @@ export async function createImportJob(options: {
     status: "QUEUED",
   });
 
-  await playlistImportQueue.add(
-    "import-playlist",
-    {
-      jobId: job._id.toString(),
-      playlistUrl: options.playlistUrl,
-      youtubePlaylistId: options.youtubePlaylistId,
-      userId: options.userId,
-      coverUrl: options.coverUrl,
-      ...overrides,
-    },
-    {
+  const jobData: PlaylistImportJobData = {
+    jobId: job._id.toString(),
+    playlistUrl: options.playlistUrl,
+    youtubePlaylistId: options.youtubePlaylistId,
+    userId: options.userId,
+    coverUrl: options.coverUrl,
+    ...overrides,
+  };
+
+  if (useJobQueue()) {
+    await getPlaylistImportQueue().add("import-playlist", jobData, {
       jobId: job._id.toString(),
       attempts: 3,
       backoff: { type: "exponential", delay: 5000 },
-    }
-  );
+    });
+  } else {
+    await processPlaylistImportJob(jobData);
+  }
 
   return job;
 }
