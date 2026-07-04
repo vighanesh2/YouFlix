@@ -1,1 +1,1 @@
-export const YOUFLIX_INTRO_SRC = "/uploads/youflix.mp4";
+export const YOUFLIX_INTRO_SRC = "/youflix.mp4";
