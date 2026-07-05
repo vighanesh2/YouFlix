@@ -112,7 +112,13 @@ export default function NavBar() {
       </div>
 
       <nav className={styles.nav}>
-        <button type="button" className={styles.searchBtn} aria-label="Search">
+        <NavLink
+          to="/search"
+          className={({ isActive }) =>
+            `${styles.searchBtn} ${isActive ? styles.searchBtnActive : ""}`
+          }
+          aria-label="Search"
+        >
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden>
             <path
               fill="none"
@@ -122,7 +128,7 @@ export default function NavBar() {
               d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z"
             />
           </svg>
-        </button>
+        </NavLink>
         <NavLink to="/" className={`${styles.navLink} ${styles.navHome}`} end>
           Home
         </NavLink>

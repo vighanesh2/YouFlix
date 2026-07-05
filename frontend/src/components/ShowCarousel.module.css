@@ -35,7 +35,7 @@
   width: calc(var(--poster-height) * 2 / 3);
   text-decoration: none;
   color: inherit;
-  transition: width 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: width 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
   scroll-snap-align: center;
 }
 

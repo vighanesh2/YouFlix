@@ -1,37 +1,12 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { listPlaylists, type Playlist } from "../api/client";
 import NavBar from "../components/NavBar";
 import ShowCarousel from "../components/ShowCarousel";
 import Top10Carousel from "../components/Top10Carousel";
+import { usePlaylists } from "../hooks/usePlaylists";
 import styles from "./HomePage.module.css";
 
 export default function HomePage() {
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const data = await listPlaylists();
-        if (!cancelled) setPlaylists(data.playlists);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load shows");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { playlists, loading, error } = usePlaylists();
 
   const rotate = (offset: number) =>
     playlists.length > 0

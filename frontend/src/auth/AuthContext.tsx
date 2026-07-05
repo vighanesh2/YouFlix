@@ -15,6 +15,8 @@ import {
   register as apiRegister,
   type AuthUser,
 } from "../api/auth";
+import { clearQueryCache } from "../api/queryCache";
+import { clearImageCache } from "../utils/imageCache";
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -67,6 +69,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     clearToken();
+    clearQueryCache();
+    clearImageCache();
     setUser(null);
   }, []);
 

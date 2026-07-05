@@ -1,4 +1,13 @@
 import { getToken } from "./auth";
+import {
+  CACHE_KEYS,
+  CACHE_TTL,
+  cachedFetch,
+  getCached,
+  invalidatePlaylist,
+  invalidatePlaylistsList,
+  setCached,
+} from "./queryCache";
 
 export interface ImportResponse {
   jobId?: string;
@@ -79,7 +88,15 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export function listPlaylists(): Promise<{ playlists: Playlist[] }> {
-  return apiFetch<{ playlists: Playlist[] }>("/api/playlists");
+  return cachedFetch(
+    CACHE_KEYS.playlists,
+    () => apiFetch<{ playlists: Playlist[] }>("/api/playlists"),
+    CACHE_TTL.playlists
+  );
+}
+
+export function getCachedPlaylists(): Playlist[] | undefined {
+  return getCached<{ playlists: Playlist[] }>(CACHE_KEYS.playlists)?.playlists;
 }
 
 function appendIfSet(formData: FormData, key: string, value?: string) {
@@ -118,6 +135,7 @@ export function importPlaylist(
     if (!res.ok) {
       throw new Error(data.error ?? data.message ?? `Request failed (${res.status})`);
     }
+    invalidatePlaylistsList();
     return data as ImportResponse;
   });
 }
@@ -127,7 +145,11 @@ export function getImportJob(jobId: string): Promise<ImportJob> {
 }
 
 export function getPlaylist(playlistId: string): Promise<Playlist> {
-  return apiFetch<Playlist>(`/api/playlists/${playlistId}`);
+  return cachedFetch(
+    CACHE_KEYS.playlist(playlistId),
+    () => apiFetch<Playlist>(`/api/playlists/${playlistId}`),
+    CACHE_TTL.playlist
+  );
 }
 
 export function updatePlaylist(
@@ -162,17 +184,28 @@ export function updatePlaylist(
     if (!res.ok) {
       throw new Error(data.error ?? data.message ?? `Request failed (${res.status})`);
     }
-    return data as Playlist;
+    const updated = data as Playlist;
+    invalidatePlaylist(playlistId);
+    setCached(CACHE_KEYS.playlist(playlistId), updated, CACHE_TTL.playlist);
+    invalidatePlaylistsList();
+    return updated;
   });
 }
 
 export function getPlaylistVideos(playlistId: string): Promise<PlaylistVideo[]> {
-  return apiFetch<PlaylistVideo[]>(`/api/playlists/${playlistId}/videos`);
+  return cachedFetch(
+    CACHE_KEYS.playlistVideos(playlistId),
+    () => apiFetch<PlaylistVideo[]>(`/api/playlists/${playlistId}/videos`),
+    CACHE_TTL.videos
+  );
 }
 
 export function deletePlaylist(playlistId: string): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(`/api/playlists/${playlistId}`, {
     method: "DELETE",
+  }).then((result) => {
+    invalidatePlaylist(playlistId);
+    return result;
   });
 }
 

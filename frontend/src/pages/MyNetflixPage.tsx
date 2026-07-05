@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   deletePlaylist,
   importPlaylist,
-  listPlaylists,
   pollImportJob,
   type ImportShowDetails,
   type Playlist,
@@ -13,6 +12,7 @@ import EditShowModal from "../components/EditShowModal";
 import LazyPoster from "../components/LazyPoster";
 import NavBar from "../components/NavBar";
 import ShowDetailsForm from "../components/ShowDetailsForm";
+import { usePlaylists } from "../hooks/usePlaylists";
 import { getPlaylistCover } from "../utils/playlistCover";
 import { getShowSeriesLabel, getShowTitle } from "../utils/showMetadata";
 import { isValidYouTubeImportUrl } from "../utils/youtubeImport";
@@ -29,9 +29,13 @@ const emptyDetails: ImportShowDetails = {
 
 export default function MyNetflixPage() {
   const navigate = useNavigate();
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [loadingLibrary, setLoadingLibrary] = useState(true);
-  const [libraryError, setLibraryError] = useState<string | null>(null);
+  const {
+    playlists,
+    loading: loadingLibrary,
+    error: libraryError,
+    refresh,
+    setPlaylists,
+  } = usePlaylists();
   const [editingShow, setEditingShow] = useState<Playlist | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
@@ -44,10 +48,6 @@ export default function MyNetflixPage() {
   const [importStatus, setImportStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    loadLibrary();
-  }, []);
-
-  useEffect(() => {
     if (!coverFile) {
       setCoverPreview(null);
       return;
@@ -57,21 +57,6 @@ export default function MyNetflixPage() {
     setCoverPreview(objectUrl);
     return () => URL.revokeObjectURL(objectUrl);
   }, [coverFile]);
-
-  async function loadLibrary() {
-    setLoadingLibrary(true);
-    setLibraryError(null);
-    try {
-      const data = await listPlaylists();
-      setPlaylists(data.playlists);
-    } catch (err) {
-      setLibraryError(
-        err instanceof Error ? err.message : "Failed to load your library"
-      );
-    } finally {
-      setLoadingLibrary(false);
-    }
-  }
 
   function updateDetail(key: keyof ImportShowDetails, value: string) {
     setDetails((prev) => ({ ...prev, [key]: value }));
@@ -129,7 +114,7 @@ export default function MyNetflixPage() {
       const result = await importPlaylist(url, coverFile, details);
 
       if (result.status === "ALREADY_IMPORTED" && result.playlistId) {
-        await loadLibrary();
+        await refresh();
         navigate(`/show/${result.playlistId}`);
         return;
       }
@@ -159,7 +144,7 @@ export default function MyNetflixPage() {
       setUrl("");
       setDetails(emptyDetails);
       setCoverFile(null);
-      await loadLibrary();
+      await refresh();
       navigate(`/show/${job.playlistId}`);
     } catch (err) {
       setImportError(err instanceof Error ? err.message : "Import failed");

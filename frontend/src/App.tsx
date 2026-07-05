@@ -6,6 +6,7 @@ import { useProfile } from "./auth/ProfileContext";
 import HomePage from "./pages/HomePage";
 import MyNetflixPage from "./pages/MyNetflixPage";
 import ProfileSelectPage from "./pages/ProfileSelectPage";
+import SearchPage from "./pages/SearchPage";
 import styles from "./App.module.css";
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -57,6 +58,16 @@ export default function App() {
             <AuthGate>
               <ProfileGate>
                 <HomePage />
+              </ProfileGate>
+            </AuthGate>
+          }
+        />
+        <Route
+          path="/search"
+          element={
+            <AuthGate>
+              <ProfileGate>
+                <SearchPage />
               </ProfileGate>
             </AuthGate>
           }

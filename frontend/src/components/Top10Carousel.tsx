@@ -1,6 +1,7 @@
-import { useCallback, useRef, useState } from "react";
+import { useRef } from "react";
 import { Link } from "react-router-dom";
 import type { Playlist } from "../api/client";
+import { useCarouselActivation } from "../hooks/useCarouselActivation";
 import { getPlaylistCover } from "../utils/playlistCover";
 import {
   formatShowMeta,
@@ -23,26 +24,12 @@ export default function Top10Carousel({
   limit = 10,
 }: Props) {
   const ranked = shows.slice(0, limit);
-  const [activeIndex, setActiveIndex] = useState(0);
   const rowRef = useRef<HTMLDivElement>(null);
+  const { activeIndex, activateIndex, scheduleActivate, clearHoverTimer } =
+    useCarouselActivation(rowRef);
 
   const activeShow = ranked[activeIndex] ?? ranked[0];
   const description = activeShow ? getShowDescription(activeShow) : "";
-
-  const scrollActiveIntoView = useCallback((index: number) => {
-    const row = rowRef.current;
-    if (!row) return;
-    const card = row.children[index] as HTMLElement | undefined;
-    if (!card) return;
-    const target =
-      card.offsetLeft - row.clientWidth / 2 + card.clientWidth / 2;
-    row.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
-  }, []);
-
-  function handleActivate(index: number) {
-    setActiveIndex(index);
-    scrollActiveIntoView(index);
-  }
 
   if (ranked.length === 0) return null;
 
@@ -51,7 +38,11 @@ export default function Top10Carousel({
       <h2 className={styles.sectionTitle}>{title}</h2>
 
       <div className={styles.carousel}>
-        <div className={styles.row} ref={rowRef}>
+        <div
+          className={styles.row}
+          ref={rowRef}
+          onMouseLeave={clearHoverTimer}
+        >
           {ranked.map((show, index) => {
             const isActive = index === activeIndex;
             const cover = getPlaylistCover(show);
@@ -63,8 +54,8 @@ export default function Top10Carousel({
                 key={show.id}
                 to={`/show/${show.id}`}
                 className={`${styles.card} ${isActive ? styles.cardActive : ""}`}
-                onMouseEnter={() => handleActivate(index)}
-                onFocus={() => handleActivate(index)}
+                onMouseEnter={() => scheduleActivate(index)}
+                onFocus={() => activateIndex(index)}
                 aria-current={isActive ? "true" : undefined}
                 aria-label={`${index + 1}. ${showTitle}`}
               >

@@ -137,6 +137,11 @@
   color: var(--text);
   cursor: pointer;
   padding: 0;
+  text-decoration: none;
+}
+
+.searchBtnActive {
+  color: #fff;
 }
 
 .navLink {

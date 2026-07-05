@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import type { Playlist, PlaylistVideo } from "../api/client";
-import { getPlaylist, getPlaylistVideos } from "../api/client";
+import type { PlaylistVideo } from "../api/client";
 import { formatDuration } from "../utils/format";
+import { usePlaylistDetail } from "../hooks/usePlaylistDetail";
 import { getPlaylistCover } from "../utils/playlistCover";
 import {
   formatShowMeta,
@@ -18,49 +18,24 @@ import styles from "./PlaylistView.module.css";
 export default function PlaylistView() {
   const { playlistId } = useParams<{ playlistId: string }>();
   const navigate = useNavigate();
-  const [playlist, setPlaylist] = useState<Playlist | null>(null);
-  const [videos, setVideos] = useState<PlaylistVideo[]>([]);
+  const { playlist, videos, loading, error } = usePlaylistDetail(playlistId);
   const [selectedVideo, setSelectedVideo] = useState<PlaylistVideo | null>(null);
   const [playing, setPlaying] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!playlistId) return;
-
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const [p, v] = await Promise.all([
-          getPlaylist(playlistId!),
-          getPlaylistVideos(playlistId!),
-        ]);
-        if (cancelled) return;
-        setPlaylist(p);
-        setVideos(v);
-        if (v.length > 0) {
-          setSelectedVideo(v[0]);
-          if (isMovieShow(p)) {
-            setPlaying(true);
-          }
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load playlist");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
+    setSelectedVideo(null);
+    setPlaying(false);
   }, [playlistId]);
 
-  if (loading) {
+  useEffect(() => {
+    if (!playlist || videos.length === 0 || selectedVideo) return;
+    setSelectedVideo(videos[0]);
+    if (isMovieShow(playlist)) {
+      setPlaying(true);
+    }
+  }, [playlist, videos, selectedVideo]);
+
+  if (loading && !playlist) {
     return <div className={styles.centered}>Loading playlist…</div>;
   }
 
@@ -80,6 +55,7 @@ export default function PlaylistView() {
   const showDescription = getShowDescription(playlist);
   const showMeta = formatShowMeta(playlist);
   const isMovie = isMovieShow(playlist);
+  const heroCover = getPlaylistCover(playlist);
 
   const currentIndex = selectedVideo
     ? videos.findIndex((v) => v.id === selectedVideo.id)
@@ -126,11 +102,7 @@ export default function PlaylistView() {
 
       <section
         className={styles.hero}
-        style={
-          getPlaylistCover(playlist)
-            ? { backgroundImage: `url(${getPlaylistCover(playlist)})` }
-            : undefined
-        }
+        style={heroCover ? { backgroundImage: `url(${heroCover})` } : undefined}
       >
         <div className={styles.heroOverlay} />
         <div className={styles.heroContent}>
