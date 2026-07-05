@@ -83,6 +83,15 @@ function formatTime(seconds: number): string {
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
+function isTouchDevice(): boolean {
+  if (typeof window === "undefined") return false;
+  return (
+    "ontouchstart" in window ||
+    navigator.maxTouchPoints > 0 ||
+    window.matchMedia("(pointer: coarse)").matches
+  );
+}
+
 export default function NetflixPlayer({
   videoId,
   title,
@@ -119,6 +128,8 @@ export default function NetflixPlayer({
     useState<YouTubeQuality>("default");
   const [activeQuality, setActiveQuality] = useState<string>("unknown");
   const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
+  const [awaitingTapToPlay, setAwaitingTapToPlay] = useState(false);
+  const autoplayTimer = useRef<number | null>(null);
 
   const scheduleHide = useCallback(() => {
     if (hideTimer.current) window.clearTimeout(hideTimer.current);
@@ -135,6 +146,28 @@ export default function NetflixPlayer({
     scheduleHide();
   }, [phase, scheduleHide]);
 
+  const startMainPlayback = useCallback(
+    (withSound: boolean) => {
+      const player = playerRef.current;
+      if (!player) return;
+
+      if (withSound) {
+        player.unMute();
+        player.setVolume(100);
+        setMuted(false);
+      } else {
+        player.mute();
+        setMuted(true);
+      }
+
+      player.playVideo();
+      setDuration(player.getDuration());
+      setAwaitingTapToPlay(false);
+      revealControls();
+    },
+    [revealControls]
+  );
+
   const beginMain = useCallback(() => {
     if (mainStartedRef.current) return;
     mainStartedRef.current = true;
@@ -142,20 +175,21 @@ export default function NetflixPlayer({
 
     window.setTimeout(() => {
       setPhase("main");
+      setControlsVisible(true);
 
       const player = playerRef.current;
       if (player) {
-        player.unMute();
-        player.setVolume(100);
-        setMuted(false);
-        player.playVideo();
-        setDuration(player.getDuration());
+        if (isTouchDevice()) {
+          setAwaitingTapToPlay(true);
+        } else {
+          startMainPlayback(true);
+          scheduleHide();
+        }
+      } else if (isTouchDevice()) {
+        setAwaitingTapToPlay(true);
       }
-
-      setControlsVisible(true);
-      scheduleHide();
     }, 650);
-  }, [scheduleHide]);
+  }, [scheduleHide, startMainPlayback]);
 
   const skipIntro = useCallback(() => {
     introRef.current?.pause();
@@ -175,6 +209,8 @@ export default function NetflixPlayer({
     setSelectedQuality("default");
     setActiveQuality("unknown");
     setQualityMenuOpen(false);
+    setAwaitingTapToPlay(false);
+    if (autoplayTimer.current) window.clearTimeout(autoplayTimer.current);
   }, [videoId]);
 
   useEffect(() => {
@@ -182,6 +218,7 @@ export default function NetflixPlayer({
     if (!video || phase !== "intro") return;
 
     video.currentTime = 0;
+    video.muted = true;
     video.play().catch(() => skipIntro());
 
     function onEnded() {
@@ -215,6 +252,8 @@ export default function NetflixPlayer({
         iv_load_policy: 3,
         disablekb: 1,
         fs: 0,
+        origin: window.location.origin,
+        enablejsapi: 1,
       },
       events: {
         onReady: (e: { target: YouTubePlayer }) => {
@@ -226,10 +265,14 @@ export default function NetflixPlayer({
           setAvailableQualities(levels);
           setActiveQuality(active);
           if (mainStartedRef.current) {
-            e.target.unMute();
-            e.target.setVolume(100);
-            setMuted(false);
-            e.target.playVideo();
+            if (isTouchDevice()) {
+              setAwaitingTapToPlay(true);
+            } else {
+              e.target.unMute();
+              e.target.setVolume(100);
+              setMuted(false);
+              e.target.playVideo();
+            }
           }
         },
         onPlaybackQualityChange: (e: { data: string }) => {
@@ -242,10 +285,13 @@ export default function NetflixPlayer({
             playingRef.current = true;
             setPlaying(true);
             setYoutubeRevealed(true);
+            setAwaitingTapToPlay(false);
             setDuration(e.target.getDuration());
             const { levels, active } = readQualities(e.target);
             setAvailableQualities(levels);
             setActiveQuality(active);
+          } else if (e.data === YT.PlayerState.BUFFERING && !youtubeRevealed) {
+            setYoutubeRevealed(true);
           } else if (
             e.data === YT.PlayerState.PAUSED ||
             e.data === YT.PlayerState.ENDED
@@ -295,6 +341,18 @@ export default function NetflixPlayer({
   }, [phase, revealControls]);
 
   useEffect(() => {
+    if (phase !== "main" || !awaitingTapToPlay || playing) return;
+
+    autoplayTimer.current = window.setTimeout(() => {
+      setControlsVisible(true);
+    }, 300);
+
+    return () => {
+      if (autoplayTimer.current) window.clearTimeout(autoplayTimer.current);
+    };
+  }, [phase, awaitingTapToPlay, playing]);
+
+  useEffect(() => {
     if (phase === "main" && !playing) {
       setControlsVisible(true);
       if (hideTimer.current) window.clearTimeout(hideTimer.current);
@@ -330,10 +388,20 @@ export default function NetflixPlayer({
     if (phase !== "main") return;
     const player = playerRef.current;
     if (!player) return;
+
+    if (awaitingTapToPlay || !playing) {
+      startMainPlayback(true);
+      return;
+    }
+
     if (playing) player.pauseVideo();
     else player.playVideo();
     revealControls();
-  }, [phase, playing, revealControls]);
+  }, [phase, playing, awaitingTapToPlay, startMainPlayback, revealControls]);
+
+  const handleTapToPlay = useCallback(() => {
+    startMainPlayback(true);
+  }, [startMainPlayback]);
 
   const seek = useCallback(
     (time: number) => {
@@ -454,6 +522,7 @@ export default function NetflixPlayer({
       }`}
       onMouseMove={revealControls}
       onClick={revealControls}
+      onTouchStart={revealControls}
     >
       <div className={styles.videoLayer}>
         <div
@@ -476,11 +545,28 @@ export default function NetflixPlayer({
             }`}
             src={YOUFLIX_INTRO_SRC}
             playsInline
+            muted
             preload="auto"
             aria-label="YouFlix intro"
           />
         )}
       </div>
+
+      {phase === "main" && awaitingTapToPlay && (
+        <button
+          type="button"
+          className={styles.tapToPlayOverlay}
+          onClick={handleTapToPlay}
+          aria-label="Tap to play"
+        >
+          <span className={styles.tapToPlayBtn}>
+            <svg viewBox="0 0 24 24" width="52" height="52" aria-hidden>
+              <path d="M8 5v14l11-7z" fill="currentColor" />
+            </svg>
+          </span>
+          <span className={styles.tapToPlayLabel}>Tap to play</span>
+        </button>
+      )}
 
       {phase === "intro" && (
         <button
